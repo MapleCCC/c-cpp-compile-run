@@ -1,7 +1,7 @@
 import { lookpath } from 'lookpath';
 import find from 'find-process';
 
-export async function commandExists(command: string): Promise < boolean > {
+export async function commandExists(command: string): Promise<boolean> {
     return await lookpath(command) !== null ? true : false;
 }
 

@@ -6,15 +6,19 @@ import { Configuration } from './configuration';
 import { File } from './models/file';
 import { terminal } from './terminal';
 import { promptRunArguments } from './utils/prompt-utils';
+import { RunOptions } from './models/run-options';
 
 export class Run {
     private file: File;
     private arguments: string;
     private shouldAskForArgs: boolean;
+    private runInExternalTerminal: boolean;
 
-    constructor(file: File, shouldAskForArgs = false) {
+    constructor(file: File, options: RunOptions = { shouldAskForArgs: false, externalTerminal: false, arguments: null }) {
         this.file = file;
-        this.shouldAskForArgs = shouldAskForArgs;
+        this.shouldAskForArgs = options.shouldAskForArgs;
+        this.arguments = options.arguments;
+        this.runInExternalTerminal = options.externalTerminal;
     }
 
     async run() {
@@ -29,7 +33,7 @@ export class Run {
             this.arguments = await promptRunArguments(this.arguments);
         }
 
-        if (Configuration.runInExternalTerminal()) {
+        if (this.runInExternalTerminal) {
             const command = this.getExternalCommand();
 
             if (command) {

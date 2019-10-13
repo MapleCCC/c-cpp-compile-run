@@ -1,11 +1,11 @@
-import { spawnSync } from 'child_process';
 import { window } from 'vscode';
 import { Configuration } from './configuration';
-import { FileType } from './enums/file-type';
 import { File } from './models/file';
 import { outputChannel } from './output-channel';
 import { promptCompiler, promptFlags } from './utils/prompt-utils';
 import { commandExists, isProccessRunning } from './utils/common-utils';
+import { CompileOptions } from './models/compile-options';
+import { spawnSync } from 'child_process';
 
 export class Compile {
     private file: File;
@@ -13,14 +13,14 @@ export class Compile {
     private inputFlags: string;
     private shouldAskForInputFlags: boolean;
 
-    constructor(file: File, shouldAskForInputFlags = false) {
+    constructor(file: File, options?: CompileOptions) {
         this.file = file;
-        this.shouldAskForInputFlags = shouldAskForInputFlags;
+        this.shouldAskForInputFlags = options.shouldAskForInputFlags;
+        this.compiler = options.compiler;
+        this.inputFlags = options.inputFlags;
     }
 
     async run() {
-        this.setCompiler().catch(error => { throw new Error(error); });
-
         if (Configuration.saveBeforeCompile()) {
             await window.activeTextEditor.document.save();
         }
@@ -62,8 +62,12 @@ export class Compile {
 
         const proccess = spawnSync(`"${this.compiler}"`, compilerArgs, { cwd: this.file.directory, shell: true, encoding: 'utf-8' });
 
-        if (proccess.output.length > 0) {
-            outputChannel.appendLine(proccess.output.toLocaleString(), this.file.name);
+        if (proccess.stderr) {
+            outputChannel.appendLine(proccess.stderr, this.file.name);
+        }
+
+        if (proccess.stdout) {
+            outputChannel.appendLine(proccess.stdout, this.file.name);
         }
 
         if (proccess.status === 0) {
@@ -72,22 +76,6 @@ export class Compile {
             window.showErrorMessage('Error compiling!');
             outputChannel.show();
             throw new Error('error');
-        }
-    }
-
-    async setCompiler() {
-        if (this.file.type === null || this.file.type === FileType.unkown) {
-            throw new Error('Invalid File!');
-        }
-
-        if (this.file.type === FileType.cplusplus) {
-            this.compiler = Configuration.cppCompiler();
-            this.inputFlags = Configuration.cppFlags();
-        }
-
-        if (this.file.type === FileType.c) {
-            this.compiler = Configuration.cCompiler();
-            this.inputFlags = Configuration.cFlags();
         }
     }
 
